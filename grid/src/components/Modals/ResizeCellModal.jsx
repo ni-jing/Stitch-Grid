@@ -1,5 +1,29 @@
 import { useState } from "react";
 
+function Tab({ label, active, onClick }) {
+    return (
+        <button
+            onClick={onClick}
+            style={{
+                flex: 1,
+                padding: "9px 0",
+                background: active ? "#E7E8EC" : "transparent",
+                border: "none",
+                borderBottom: active ? "2px solid #007ACC" : "2px solid transparent",
+                color: active ? "#1E1E1E" : "#8A8A8A",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 400,
+                fontFamily: "inherit",
+                letterSpacing: 0.5,
+                transition: "color 0.12s, background 0.12s, border-color 0.12s",
+            }}
+        >
+            {label}
+        </button>
+    );
+}
+
 function NumberField({ label, value, onChange, onKeyDown, autoFocus, hasError }) {
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -17,7 +41,7 @@ function NumberField({ label, value, onChange, onKeyDown, autoFocus, hasError })
             </label>
             <input
                 type="text"
-                inputMode="numeric"
+                inputMode="decimal"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 onKeyDown={onKeyDown}
@@ -38,33 +62,60 @@ function NumberField({ label, value, onChange, onKeyDown, autoFocus, hasError })
     );
 }
 
-export default function ResizeGridModal({ onCancel, onResize, gridRows, gridCols }) {
-    const [rows, setRows] = useState(String(gridRows ?? ""));
-    const [cols, setCols] = useState(String(gridCols ?? ""));
+export default function ResizeCellModal({ onCancel, onResize, cellAspect }) {
+    const isCustomAspect = cellAspect && (cellAspect.w !== 1 || cellAspect.h !== 1);
+    const [tab, setTab] = useState(isCustomAspect ? "define" : "gauge"); // "gauge" | "define"
+    const [gaugeStitches, setGaugeStitches] = useState("");
+    const [gaugeRows, setGaugeRows] = useState("");
+    const [defineHeight, setDefineHeight] = useState(isCustomAspect ? String(Math.round(cellAspect.h * 100) / 100) : "");
+    const [defineWidth, setDefineWidth] = useState(isCustomAspect ? String(Math.round(cellAspect.w * 100) / 100) : "");
     const [error, setError] = useState("");
 
-    const fields = [
-        { key: "rows", label: "Rows", value: rows, setValue: setRows },
-        { key: "cols", label: "Columns", value: cols, setValue: setCols },
-    ];
+    const fields = tab === "gauge"
+        ? [
+            { key: "stitches", label: "Stitches", value: gaugeStitches, setValue: setGaugeStitches },
+            { key: "rows", label: "Rows", value: gaugeRows, setValue: setGaugeRows },
+        ]
+        : [
+            { key: "height", label: "Height", value: defineHeight, setValue: setDefineHeight },
+            { key: "width", label: "Width", value: defineWidth, setValue: setDefineWidth },
+        ];
 
-    const isValidInt = (str) => {
+    const switchTab = (next) => {
+        setTab(next);
+        setError("");
+    };
+
+    const isValidNumber = (str) => {
         if (str === null || str === undefined) return false;
         const trimmed = String(str).trim();
         if (trimmed === "") return false;
         const n = Number(trimmed);
-        return Number.isInteger(n) && n > 0;
+        return Number.isFinite(n) && n > 0;
     };
 
     const handleOk = () => {
         for (const f of fields) {
-            if (!isValidInt(f.value)) {
-                setError(`Please enter a valid whole number for ${f.label.toLowerCase()}.`);
+            if (!isValidNumber(f.value)) {
+                setError(`Please enter a valid number for ${f.label.toLowerCase()}.`);
                 return;
             }
         }
         setError("");
-        onResize(Number(rows), Number(cols));
+
+        if (tab === "gauge") {
+            onResize({
+                mode: "gauge",
+                stitches: Number(gaugeStitches),
+                rows: Number(gaugeRows),
+            });
+        } else {
+            onResize({
+                mode: "define",
+                height: Number(defineHeight),
+                width: Number(defineWidth),
+            });
+        }
     };
 
     const handleKeyDown = (e) => {
@@ -109,10 +160,15 @@ export default function ResizeGridModal({ onCancel, onResize, gridRows, gridCols
                         textAlign: "center",
                     }}
                 >
-                    Resize Grid
+                    Resize Cell
                 </div>
 
-                <div style={{ padding: "0 28px", boxSizing: "border-box" }}>
+                <div style={{ display: "flex", borderBottom: "1px solid #EEEEF2", margin: "0 28px" }}>
+                    <Tab label="Gauge" active={tab === "gauge"} onClick={() => switchTab("gauge")} />
+                    <Tab label="Define" active={tab === "define"} onClick={() => switchTab("define")} />
+                </div>
+
+                <div style={{ padding: "20px 28px 0", boxSizing: "border-box" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
                         {fields.map((f, i) => (
                             <NumberField

@@ -1,6 +1,23 @@
 import { useState } from "react";
 import { svgToDataUrl } from "../../utils/svgUtils";
 
+// Mirrors TopBar.jsx's ICON_PATHS/MenuIcon convention: raw path data + a
+// tiny local renderer, kept in the file that uses it rather than a shared
+// icon module. (chevRight duplicates TopBar's own ICON_PATHS.chevRight —
+// same precedent as that file having its own independent copy.)
+const CHEV_RIGHT_PATH =
+  "M10.072 8.024L5.715 3.667l.618-.62L11 7.716v.618L6.333 13l-.618-.619 4.357-4.357z";
+const FOLDER_PATH =
+  "M14.5 3H7.71l-.85-.85L6.51 2h-5l-.5.5v11l.5.5h13l.5-.5v-10L14.5 3zm-.51 8.49V13h-12V7h4.49l.35-.15.86-.86H14v1.5l-.01 4zm0-6.49h-6.5l-.35.15-.86.86H2v-3h4.29l.85.85.36.15H14l-.01.99z";
+
+function Icon({ d, size = 14, color = "currentColor" }) {
+  return (
+    <svg viewBox="0 0 16 16" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
+      <path fillRule="evenodd" clipRule="evenodd" d={d} fill={color} />
+    </svg>
+  );
+}
+
 /** Count total files in a tree node recursively */
 function countFiles(node) {
   let count = (node.__files || []).length;
@@ -26,8 +43,8 @@ function DirFileRow({ item, symbols, addFromDirectory, removeFromDirectory, isCu
       style={{
         marginLeft: (depth + 1) * 10,
         marginBottom: 2,
-        background: "#0f1828",
-        border: "1px solid #1a2840",
+        background: "#E8E8E8",
+        border: "1px solid #EEEEF2",
         borderRadius: 4,
         overflowX: "auto",
       }}
@@ -64,29 +81,29 @@ function DirFileRow({ item, symbols, addFromDirectory, removeFromDirectory, isCu
         <div style={{ flexShrink: 0 }}>
           <div
             style={{
-              color: "#c0c0e0",
+              color: "#4B4B4B",
               fontSize: 16,
-              fontWeight: 600,
+              fontWeight: 400,
               whiteSpace: "nowrap",
             }}
           >
             {item.name}
           </div>
-          <div style={{ color: "#4a5a7a", fontSize: 12 }}>{item.defaultWidth}W</div>
+          <div style={{ color: "#8A8A8A", fontSize: 12 }}>{item.defaultWidth}W</div>
         </div>
         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
           {isCustom && (
             <button
               onClick={() => removeFromDirectory(item.id)}
               style={{
-                background: "#3a1a1a",
-                border: "1px solid #5a2a2a",
+                background: "#FDECEA",
+                border: "1px solid #FAD4D4",
                 borderRadius: 3,
-                color: "#e94560",
+                color: "#C42B1C",
                 cursor: "pointer",
                 fontSize: 12,
                 padding: "2px 6px",
-                fontWeight: 700,
+                fontWeight: 400,
               }}
             >
               ✕
@@ -96,14 +113,14 @@ function DirFileRow({ item, symbols, addFromDirectory, removeFromDirectory, isCu
             onClick={() => addFromDirectory(item)}
             disabled={alreadyAdded}
             style={{
-              background: alreadyAdded ? "#1a2a1a" : "#1a3a2a",
-              border: `1px solid ${alreadyAdded ? "#2a3a2a" : "#3a7a5a"}`,
+              background: alreadyAdded ? "#EDF2ED" : "#DFF6DD",
+              border: `1px solid ${alreadyAdded ? "#D3DBD3" : "#9FD89F"}`,
               borderRadius: 3,
-              color: alreadyAdded ? "#3a5a3a" : "#60d090",
+              color: alreadyAdded ? "#7A9A7A" : "#107C10",
               cursor: alreadyAdded ? "default" : "pointer",
               fontSize: 12,
               padding: "2px 7px",
-              fontWeight: 700,
+              fontWeight: 400,
             }}
           >
             {alreadyAdded ? "✓" : "+"}
@@ -150,30 +167,32 @@ function TreeNode({
           border: "none",
           borderRadius: 4,
           cursor: "pointer",
-          color: depth === 0 ? "#7090c0" : "#6080a0",
+          color: depth === 0 ? "#4B4B4B" : "#8A8A8A",
           fontSize: depth === 0 ? 14 : 13,
-          fontWeight: 700,
+          fontWeight: 400,
           fontFamily: "inherit",
           letterSpacing: depth === 0 ? 0.5 : 0,
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "#1a2a40")}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "#C9DEF5")}
         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
       >
         <span
           style={{
-            display: "inline-block",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
             width: 12,
-            fontSize: 10,
-            color: "#5070a0",
             transition: "transform 0.15s",
             transform: open ? "rotate(90deg)" : "rotate(0deg)",
           }}
         >
-          ▶
+          <Icon d={CHEV_RIGHT_PATH} size={10} color="#8A8A8A" />
         </span>
-        <span style={{ color: "#5a7ab0", fontSize: 14 }}>📁</span>
+        <span style={{ display: "inline-flex", alignItems: "center" }}>
+          <Icon d={FOLDER_PATH} size={14} color="#8A8A8A" />
+        </span>
         {label}
-        <span style={{ color: "#3a5a80", fontSize: 11, fontWeight: 400, marginLeft: 2 }}>
+        <span style={{ color: "#8A8A8A", fontSize: 11, fontWeight: 400, marginLeft: 2 }}>
           ({countFiles(node)})
         </span>
       </button>
@@ -225,8 +244,8 @@ export default function DirectoryPanel({
   return (
     <div
       style={{
-        borderBottom: "1px solid #0f3460",
-        background: "#0d1626",
+        borderBottom: "1px solid #EEEEF2",
+        background: "#E8E8E8",
         flexShrink: 0,
         maxHeight: 360,
         display: "flex",
@@ -234,21 +253,21 @@ export default function DirectoryPanel({
       }}
     >
       <div style={{ padding: "8px 8px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ color: "#5080e0", fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>SVG DIRECTORY</div>
+        <div style={{ color: "#007ACC", fontSize: 13, fontWeight: 400, letterSpacing: 1 }}>SVG DIRECTORY</div>
         <button
           onClick={() => dirFileInputRef.current?.click()}
           style={{
-            background: "#1a3050",
-            border: "1px solid #3a6a9a",
+            background: "#EEEEF2",
+            border: "1px solid #EEEEF2",
             borderRadius: 4,
-            color: "#60a0d0",
+            color: "#007ACC",
             cursor: "pointer",
             fontSize: 12,
-            fontWeight: 700,
+            fontWeight: 400,
             padding: "3px 10px",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#2a4060")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#1a3050")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#C9DEF5")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#EEEEF2")}
         >
           + ADD SVG
         </button>

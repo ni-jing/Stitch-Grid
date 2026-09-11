@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar/Sidebar";
 import GridCanvas from "./components/GridCanvas";
 import TopBar from "./components/TopBar/TopBar";
 import ResetModal from "./components/Modals/ResetModal";
+import MemoPanel from "./components/MemoPanel/MemoPanel";
 
 export default function App() {
   const state = useGridState();
@@ -12,6 +13,35 @@ export default function App() {
   // Knitting mode state
   const [knittingMode, setKnittingMode] = useState(false);
   const [slashedRows, setSlashedRows] = useState(new Set());
+
+  // Fill mode state
+  const [fillMode, setFillMode] = useState(false);
+
+  // Row shading (View menu): "none" (default) or "alternate"
+  const [rowShading, setRowShading] = useState("none");
+
+  // Memo pad state
+  const [memoOpen, setMemoOpen] = useState(false);
+  const [memoText, setMemoText] = useState("");
+
+  // Context menu (right-click on canvas → Edit menu at cursor)
+  const [contextMenuPos, setContextMenuPos] = useState(null); // {x, y} | null
+
+  // Keep the hook's ref in sync so saveGridmark always writes the latest text
+  useEffect(() => {
+    state.memoTextRef.current = memoText;
+  }, [memoText, state.memoTextRef]);
+
+  // Wrap importGridmark so we can restore memoText from the loaded file
+  const importGridmark = useCallback((jsonStr, handle) => {
+    const restoredMemo = state.importGridmark(jsonStr, handle);
+    if (typeof restoredMemo === "string") setMemoText(restoredMemo);
+  }, [state.importGridmark]);
+
+  // Deactivate fill mode when knitting mode or bg editing is active
+  useEffect(() => {
+    if (knittingMode || state.bgImageEditing) setFillMode(false);
+  }, [knittingMode, state.bgImageEditing]);
 
   const toggleKnittingMode = useCallback(() => {
     setKnittingMode((prev) => {
@@ -96,7 +126,7 @@ export default function App() {
   }, [state.onMouseUp]);
 
   return (
-    <div style={{ display: "flex", height: "100%", width: "100%", background: "#1a1a2e", fontFamily: "'JetBrains Mono', 'Courier New', monospace", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100%", width: "100%", background: "#FFFFFF", fontFamily: "Arial, sans-serif", overflow: "hidden" }}>
       {!knittingMode && (
         <Sidebar
           symbols={state.symbols} showEditSymbols={state.showEditSymbols} setShowEditSymbols={state.setShowEditSymbols}
@@ -110,29 +140,52 @@ export default function App() {
           svgTree={state.svgTree} customDirectoryTree={state.customDirectoryTree}
           dirFileInputRef={state.dirFileInputRef} handleDirSvgUpload={state.handleDirSvgUpload}
           addFromDirectory={state.addFromDirectory} removeFromDirectory={state.removeFromDirectory}
-          selected={state.selected} setSelected={state.setSelected} moveMode={state.moveMode}
+          selected={state.selected} setSelected={state.setSelected} moveMode={state.movingSelection}
+          reorderSymbols={state.reorderSymbols}
+          groups={state.groups} pasteGroupAtSelection={state.pasteGroupAtSelection}
+          deleteGroup={state.deleteGroup} renameGroup={state.renameGroup}
         />
       )}
       <GridCanvas
-        containerRef={state.containerRef} spaceDown={state.spaceDown} moveMode={knittingMode ? false : state.moveMode}
+        containerRef={state.containerRef} spaceDown={state.spaceDown} movingSelection={knittingMode ? false : state.movingSelection}
         onMouseDown={knittingMode ? knittingMouseDown : state.onMouseDown}
         onMouseMove={knittingMode ? knittingMouseMove : state.onMouseMove}
         onMouseUp={knittingMode ? knittingMouseUp : state.onMouseUp}
         onWheel={state.onWheel}
-        offset={state.offset} cs={state.cs} zoom={state.zoom} cells={state.cells} symbols={state.symbols}
-        selected={knittingMode ? new Set() : state.selected} dragRect={knittingMode ? null : state.dragRect} moveOffset={state.moveOffset}
+        offset={state.offset} csW={state.csW} csH={state.csH} zoom={state.zoom} cells={state.cells} symbols={state.symbols}
+        selected={knittingMode ? new Set() : state.selected} clipboard={state.clipboard} dragRect={knittingMode ? null : state.dragRect} moveOffset={state.moveOffset}
         getViewport={state.getViewport} selectionInfo={knittingMode ? null : selectionInfo}
         bgImage={state.bgImage} bgImageEditing={knittingMode ? false : state.bgImageEditing} bgImageStartDrag={state.bgImageStartDrag}
+        bgImageFix={state.bgImageFix} bgImageRemove={state.bgImageRemove} setBgImageOpacity={state.setBgImageOpacity}
         gridRows={state.gridRows} gridCols={state.gridCols}
         guideLineMode={knittingMode ? false : state.guideLineMode} guideLines={state.guideLines} guideLinePreview={knittingMode ? null : state.guideLinePreview}
         knittingMode={knittingMode} slashedRows={slashedRows} onNextRow={knitNextRow} onPrevRow={knitPrevRow}
+        fillMode={fillMode} fillCell={state.fillCell} onFillMouseUp={state.resetFillCell}
+        onContextMenu={(x, y) => setContextMenuPos({ x, y })}
+        findOpen={state.findOpen} findSymbolId={state.findSymbolId} setFindSymbol={state.setFindSymbol}
+        findMatches={state.findMatches} findMatchIndex={state.findMatchIndex} findNext={state.findNext} findPrev={state.findPrev}
+        closeFind={state.closeFind}
+        replaceSymbolId={state.replaceSymbolId} setReplaceSymbol={state.setReplaceSymbol}
+        onReplace={state.onReplace} onReplaceAll={state.onReplaceAll}
+        replaceRowOpen={state.replaceRowOpen} setReplaceRowOpen={state.setReplaceRowOpen}
+        findColor={state.findColor} setFindColor={state.setFindColor}
+        replaceColor={state.replaceColor} setReplaceColor={state.setReplaceColor}
+        replaceColorEnabled={state.replaceColorEnabled} setReplaceColorEnabled={state.setReplaceColorEnabled}
+        findHighlight={state.findHighlight}
+        rowShading={rowShading}
       />
       <TopBar
-        selected={state.selected} setSelected={state.setSelected} moveMode={state.moveMode}
-        enterMoveMode={state.enterMoveMode} commitMove={state.commitMove}
+        selected={state.selected} setSelected={state.setSelected}
         historyLen={state.historyLen} undo={state.undo} redo={state.redo}
         clipboard={state.clipboard} copySelected={state.copySelected} paste={state.paste}
-        clearSelected={state.clearSelected} setShowConfirm={state.setShowConfirm}
+        colorClipboard={state.colorClipboard} copySelectedColor={state.copySelectedColor} pasteColor={state.pasteColor}
+        symbolClipboard={state.symbolClipboard} copySelectedSymbol={state.copySelectedSymbol} pasteSymbol={state.pasteSymbol}
+        saveGroup={state.saveGroup}
+        cutSelectedSymbols={state.cutSelectedSymbols}
+        mirrorUp={state.mirrorUp} mirrorDown={state.mirrorDown} mirrorLeft={state.mirrorLeft} mirrorRight={state.mirrorRight}
+        flipHorizontal={state.flipHorizontal} flipVertical={state.flipVertical}
+        clearSelected={state.clearSelected} clearSelectedColors={state.clearSelectedColors} colorSelectedCells={state.colorSelectedCells} setShowConfirm={state.setShowConfirm}
+        clearAllCells={state.clearAllCells} clearAllColors={state.clearAllColors}
         cells={state.cells} symbols={state.symbols}
         bgImage={state.bgImage} bgImageEditing={state.bgImageEditing}
         bgFileInputRef={state.bgFileInputRef} handleBgImageUpload={state.handleBgImageUpload}
@@ -141,15 +194,27 @@ export default function App() {
         insertColumnsBefore={state.insertColumnsBefore} insertColumnsAfter={state.insertColumnsAfter}
         insertRowBefore={state.insertRowBefore} insertRowAfter={state.insertRowAfter}
         removeSelectedColumns={state.removeSelectedColumns} removeSelectedRows={state.removeSelectedRows}
-        importGridmark={state.importGridmark} saveGridmark={state.saveGridmark} saveError={state.saveError}
+        importGridmark={importGridmark} saveGridmark={state.saveGridmark} saveError={state.saveError}
         gridRows={state.gridRows} gridCols={state.gridCols}
         guideLineMode={state.guideLineMode} startGuideLine={state.startGuideLine} endGuideLine={state.endGuideLine}
         guideLines={state.guideLines} clearGuideLines={state.clearGuideLines} removeLastGuideLine={state.removeLastGuideLine}
         knittingMode={knittingMode} toggleKnittingMode={toggleKnittingMode}
         fileName={state.fileName} setFileName={state.setFileName}
-        resizeGrid={state.resizeGrid}
+        resizeGrid={state.resizeGrid} resizeCell={state.resizeCell} cellAspect={state.cellAspect}
+        cellColor={state.cellColor} setCellColor={state.setCellColor}
+        fillMode={fillMode} setFillMode={setFillMode}
+        fitGridToPage={state.fitGridToPage}
+        memoOpen={memoOpen} onMemoToggle={() => setMemoOpen((o) => !o)}
+        contextMenuPos={contextMenuPos} onContextMenuClose={() => setContextMenuPos(null)}
+        openFind={state.openFind}
+        openReplace={state.openReplace}
+        lastUsedSymbolId={state.lastUsedSymbolId}
+        placeSymbol={state.placeSymbol}
+        rowShading={rowShading} setRowShading={setRowShading}
+        zoom={state.zoom} setZoom={state.setZoom}
       />
       {state.showConfirm && <ResetModal onCancel={() => state.setShowConfirm(false)} onReset={state.resetGrid} />}
+      {memoOpen && <MemoPanel text={memoText} onChange={setMemoText} onClose={() => setMemoOpen(false)} />}
     </div>
   );
 }

@@ -1,64 +1,91 @@
 # HELP
 
-## BASIC
-click: select cells<br>
-drag: multi select<br>
-ctrl + click/drag: multi select<br>
-ctrl + z: undo<br>
-ctrl + y: redo<br>
-ctrl + c: copy<br>
-ctrl + v: paste<br>
-ctrl + s: save work as json<br>
-scroll: zoom<br>
-middle mouse: pan<br>
-space + drag: pan<br>
-del: delete selected symbols<br>
-arrow keys: select neighboring cell in that direction<br>
+## SELECTION MODE - CURSOR ICON
+Select cells then click symbol on side bar to place symbol
+Number of selected cells in a row must be >= Symbol width
 
-## SIDE BAR
-**DIR** — directory of symbols<br>
-**EDIT** — upload your own symbols, must have svg extension. Width is the number of grid cells the symbol occupies.<br>
+**click:** select cells
+**drag:** multi select
+**drag selected cells**: move cells
+**ctrl + click/drag:** multi select
+**scroll:** zoom
+**middle mouse/space + drag:** pan
+**right click:** open edit menu
+**color picker:** color selected cells
 
-## PLACING SYMBOLS
-Select cells then click symbol on side bar<br>
-Number of selected cells in a row >= Symbol width<br>
+## COLORING MODE - COLOR FILL ICON
+Cells are colored with color in Color Picker
+Click Color picker to change color
+Outlined color box is active
 
 ## FILE
-**Import:** Import JSON file that was saved before, template available soon.<br>
-**Save:** Save as JSON to be re-imported back to grid<br>
-**Save as Image:** as it says<br>
+**Import:** Import JSON file that was saved before
+**Save:** Save as JSON to be re-imported back to grid
+**Save as:** Save grid as image/vector
+**Save Legened:** Save legend as image/vector
 
 ## EDIT
-**Undo**<br>
-**Redo**<br>
-**Copy:** copy selected cells<br>
-**Paste:** paste on selected cell<br>
-**Clear:** delete selected symbols<br>
-**Deselect:** deselect all cells<br>
-**Resize Grid:** resize grid to desired size<br>
+**Right Click** to open edit menu
+**Undo**
+**Redo**
+**Cut (All):** clear selected cells
+**Copy (All):** copy selected cells
+**Paste (All):** paste clipboard to selected cell
+**Mirror:** mirror selected cells in direction
+**Flip Horizontal:** flip selected cells horizontally
+**Flip Vertically:** flip selected cells vertically
+**Find:** find color and/or symbols
+**Replace:** replace with color and/or symbols
+**Deselect:** deselect all cells
+**Resize Grid:** resize grid to desired size
+**Resize Cell:** resize cells according to gauge or defined values
+**Clear All Colors:** clear all colors on the grid
+**Clear All Cells:** clear all color and symbols on grid
+**Restart:** Clear all work and reset to default grid
 
 ## INSERT
-**Column Before:** insert x columns on the left of x selected columns<br>
-**Column After:** insert x columns on the right of x selected columns<br>
-**Row Before:** insert x rows on the left of x selected columns<br>
-**Row After:** insert x rows on the right of x selected columns<br>
-**Add Column:** 1 column added to the right of the grid<br>
-**Add Row:** 1 row added to the bottom of the grid<br>
-**Delete Column:** Delete columns of selected cells<br>
-**Delete Row:** Delete rows of selected cells<br>
+**Column Before:** insert x columns on the left of x selected columns
+**Column After:** insert x columns on the right of x selected columns
+**Row Before:** insert x rows on the left of x selected columns
+**Row After:** insert x rows on the right of x selected columns
+**Add Column:** 1 column added to the right of the grid
+**Add Row:** 1 row added to the bottom of the grid
+**Delete Column:** Delete columns of selected cells
+**Delete Row:** Delete rows of selected cells
 
-## MOVE
-Select cells to move<br>
-Click **MOVE** button on top right<br>
-Drag/Arrow Keys to move selected cells<br>
-Click **PLACE HERE** to exit move mode<br>
+## VIEW
+**Knitting Mode:** Keeps track of which row you have knit till
+Flat/Round: knitting in the round/back and forth
+Next Row/Up/Enter: Slash out one row
+Previous Row/Down/Backspace: Unslash one row
+Click: Slash up till clicked cell
+**No Shading:** Turn off shading
+**Shading:** Alternate row shading
+**Background Image:** insert background image
+**Edit Background Image:** move/stretch/change opacity of background image
+**Remove Background Image:**
+**Memo:** Open memo pad to take notes, content is saved when memo is closed
+**Fit to page:** fit grid to page
 
-## BG
-Upload an image as reference<br>
-Resize/Move image to align with the grid<br>
+## SELECTION HUD
+Number of cells selected
+Rows: {num of rows selected} Cols: {num of cols selected}
+[start row, start col] -> [end row, end col]
 
-## KNITTING MODE
-Keeps track of which row you have knit till<br>
-**Next Row/Up/Enter:** Slash out one row<br>
-**Previous Row/Down/Backspace:** Unslash one row<br>
-**Click:** Slash up till clicked cell
+## SIDE BAR
+**DIR:** directory of symbols
+**EDIT:** upload your own symbols, must have svg extension. Width is the number of grid cells the symbol occupies.
+**◀:** collapse/expand side bar
+
+## KEYBOARD SHORTCUTS
+**ctrl + x:** cut
+**ctrl + z:** undo
+**ctrl + y:** redo
+**ctrl + c:** copy
+**ctrl + v:** paste
+**ctrl + s:** save work as json
+**ctrl + f:** find
+**ctrl + h:** replace
+**space + drag:** pan
+**del/backspace:** delete selected symbols
+**arrow keys:** select neighboring cell in that direction
