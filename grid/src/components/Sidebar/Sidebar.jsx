@@ -18,6 +18,19 @@ const SYMBOL_GROUP_PATH =
   "M7 3l1-1h6l1 1v5l-1 1h-4V8h4V3H8v3H7V3zm2 6V8L8 7H2L1 8v5l1 1h6l1-1V9zM8 8v5H2V8h6zm1.414-1L9 6.586V6h4v1H9.414zM9 4h4v1H9V4zm-2 6H3v1h4v-1z";
 const FOLDER_OPEN_PATH =
   "M1.5 14h11l.48-.37 2.63-7-.48-.63H14V3.5l-.5-.5H7.71l-.86-.85L6.5 2h-5l-.5.5v11l.5.5zM2 3h4.29l.86.85.35.15H13v2H8.5l-.35.15-.86.85H3.5l-.47.34-1 3.08L2 3zm10.13 10H2.19l1.67-5H7.5l.35-.15.86-.85h5.79l-2.37 6z";
+// File-tree row icon (Files section, opened Gridmark .json files). Native
+// viewBox is 32x32, unlike the other icons here, so it gets its own tiny
+// renderer (FileGridIcon) instead of going through Icon's 16x16 assumption.
+const FILE_GRID_ICON_PATH =
+  "M1.2 0L12.8 0L14 1.2L14 12.8L12.8 14L1.2 14L0 12.8L0 1.2ZM2.2 2.2L11.8 2.2L11.8 11.8L2.2 11.8ZM19.2 0L30.8 0L32 1.2L32 12.8L30.8 14L19.2 14L18 12.8L18 1.2ZM20.2 2.2L29.8 2.2L29.8 11.8L20.2 11.8ZM1.2 18L12.8 18L14 19.2L14 30.8L12.8 32L1.2 32L0 30.8L0 19.2ZM2.2 20.2L11.8 20.2L11.8 29.8L2.2 29.8ZM19.2 18L30.8 18L32 19.2L32 30.8L30.8 32L19.2 32L18 30.8L18 19.2ZM20.2 20.2L29.8 20.2L29.8 29.8L20.2 29.8Z";
+
+function FileGridIcon({ size = 13, color = "currentColor" }) {
+  return (
+    <svg viewBox="0 0 32 32" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "block", flexShrink: 0 }}>
+      <path fillRule="evenodd" clipRule="evenodd" d={FILE_GRID_ICON_PATH} fill={color} />
+    </svg>
+  );
+}
 
 function Icon({ d, size = 14, color = "currentColor" }) {
   return (
@@ -175,6 +188,173 @@ function GroupRow({
   );
 }
 
+/** Count total files in a folder-tree node recursively (mirrors DirectoryPanel's countFiles) */
+function countTreeFiles(node) {
+  let count = (node.__files || []).length;
+  for (const key of Object.keys(node)) {
+    if (key === "__files") continue;
+    count += countTreeFiles(node[key]);
+  }
+  return count;
+}
+
+/** Capitalize a raw folder name for display (mirrors DirectoryPanel's folderLabel) */
+function folderNodeLabel(name) {
+  return name.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * One .json file row in the local-folder tree — click to open it onto the
+ * grid. `depth` is the nesting depth of the *folder this file lives in*
+ * (0 for root-level files and files one level inside a top-level folder),
+ * used only to pad the row's own content over — the highlighted background
+ * itself always spans the full width of the sidebar's content area, no
+ * outline, just a filled rectangle.
+ */
+function FileTreeFileRow({ item, depth, isOpen, onOpen }) {
+  return (
+    <button
+      onClick={() => onOpen(item)}
+      title={item.name}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        width: "100%",
+        boxSizing: "border-box",
+        padding: `6px 10px 6px ${20 + depth * 14}px`,
+        marginBottom: 1,
+        background: isOpen ? "#DCEEFB" : "transparent",
+        border: "none",
+        borderRadius: 4,
+        color: isOpen ? "#007ACC" : "#4B4B4B",
+        cursor: "pointer",
+        fontSize: 13,
+        fontFamily: "inherit",
+        textAlign: "left",
+      }}
+      onMouseEnter={(e) => { if (!isOpen) e.currentTarget.style.background = "#C9DEF5"; }}
+      onMouseLeave={(e) => { if (!isOpen) e.currentTarget.style.background = "transparent"; }}
+    >
+      <FileGridIcon size={13} color={isOpen ? "#007ACC" : "#8A8A8A"} />
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {item.name.replace(/\.json$/i, "")}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * Recursive collapsible folder node for the local-folder browser.
+ * Mirrors DirectoryPanel.jsx's TreeNode, adapted so leaves open a file onto
+ * the grid instead of adding a symbol.
+ */
+function FileTreeNode({ node, label, depth, defaultOpen, openFileId, onOpenFile }) {
+  const [open, setOpen] = useState(defaultOpen ?? depth === 0);
+  const subfolders = Object.keys(node).filter((k) => k !== "__files");
+  const files = node.__files || [];
+
+  if (subfolders.length === 0 && files.length === 0) return null;
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          width: "100%",
+          boxSizing: "border-box",
+          padding: `4px 6px 4px ${6 + depth * 14}px`,
+          marginBottom: 1,
+          background: "transparent",
+          border: "none",
+          borderRadius: 4,
+          cursor: "pointer",
+          color: depth === 0 ? "#4B4B4B" : "#8A8A8A",
+          fontSize: depth === 0 ? 14 : 13,
+          fontWeight: 400,
+          fontFamily: "inherit",
+          letterSpacing: depth === 0 ? 0.5 : 0,
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "#C9DEF5")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 12,
+            transition: "transform 0.15s",
+            transform: open ? "rotate(90deg)" : "rotate(0deg)",
+          }}
+        >
+          <Icon d={CHEV_RIGHT_PATH} size={10} color="#8A8A8A" />
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center" }}>
+          <Icon d={FOLDER_OPEN_PATH} size={13} color="#8A8A8A" />
+        </span>
+        {label}
+        <span style={{ color: "#8A8A8A", fontSize: 11, fontWeight: 400, marginLeft: 2 }}>
+          ({countTreeFiles(node)})
+        </span>
+      </button>
+
+      {open && (
+        <div>
+          {subfolders.sort().map((key) => (
+            <FileTreeNode
+              key={key}
+              node={node[key]}
+              label={folderNodeLabel(key)}
+              depth={depth + 1}
+              openFileId={openFileId}
+              onOpenFile={onOpenFile}
+            />
+          ))}
+          {files.map((item) => (
+            <FileTreeFileRow key={item.id} item={item} depth={depth} isOpen={openFileId === item.id} onOpen={onOpenFile} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Renders the root folder's direct children with no wrapping header row (the folder name + Change/Close controls are already shown above this in the Files section). */
+function FileTreeRootChildren({ node, openFileId, onOpenFile }) {
+  const subfolders = Object.keys(node).filter((k) => k !== "__files");
+  const files = node.__files || [];
+
+  if (subfolders.length === 0 && files.length === 0) {
+    return (
+      <div style={{ color: "#8A8A8A", fontSize: 13, padding: "8px 2px", lineHeight: 1.5 }}>
+        No .json files found in this folder.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {subfolders.sort().map((key) => (
+        <FileTreeNode
+          key={key}
+          node={node[key]}
+          label={folderNodeLabel(key)}
+          depth={0}
+          openFileId={openFileId}
+          onOpenFile={onOpenFile}
+        />
+      ))}
+      {files.map((item) => (
+        <FileTreeFileRow key={item.id} item={item} depth={0} isOpen={openFileId === item.id} onOpen={onOpenFile} />
+      ))}
+    </div>
+  );
+}
+
 export default function Sidebar({
   // symbols
   symbols,
@@ -219,6 +399,15 @@ export default function Sidebar({
   selected,
   setSelected,
   moveMode,
+  // local folder browser (Files section) — wired through App.jsx/useGridState.js.
+  fileSystemApiSupported,
+  folderTree,
+  folderName,
+  openFolder,
+  closeFolder,
+  openFileFromTree,
+  openFileId,
+  folderError,
 }) {
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [collapsed, setCollapsed] = useState(false);
@@ -569,21 +758,131 @@ export default function Sidebar({
               </>
             )}
 
-            {/* ── Files section — placeholder ──
-                Opening a local folder (File System Access API) and browsing
-                its contents here isn't built yet; this is just the docked
-                spot for it once useGridState.js grows that state. */}
+            {/* ── Files section ──
+                Local-folder browser (File System Access API): pick a folder,
+                browse its .json (Gridmark) files, click one to open it onto
+                the grid. Opening reuses importGridmark with the file's own
+                handle, so Save writes straight back to that same file. */}
             {activeSection === "files" && (
-              <div style={{ padding: "20px 8px", textAlign: "center" }}>
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-                  <Icon d={FOLDER_OPEN_PATH} size={26} color="#AAAAAA" />
-                </div>
-                <div style={{ color: "#8A8A8A", fontSize: 16, lineHeight: 1.6 }}>
-                  No folder open
-                </div>
-                <div style={{ color: "#AAAAAA", fontSize: 14, marginTop: 4, lineHeight: 1.5 }}>
-                  Opening a local folder to browse its files here isn't wired up yet.
-                </div>
+              <div>
+                {!fileSystemApiSupported ? (
+                  <div style={{ padding: "20px 8px", textAlign: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                      <Icon d={FOLDER_OPEN_PATH} size={26} color="#AAAAAA" />
+                    </div>
+                    <div style={{ color: "#8A8A8A", fontSize: 16, lineHeight: 1.6 }}>
+                      Not supported in this browser
+                    </div>
+                    <div style={{ color: "#AAAAAA", fontSize: 14, marginTop: 4, lineHeight: 1.5 }}>
+                      Opening local folders needs a Chromium-based browser (Chrome, Edge).
+                    </div>
+                  </div>
+                ) : !folderTree ? (
+                  <div style={{ padding: "20px 8px", textAlign: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                      <Icon d={FOLDER_OPEN_PATH} size={26} color="#AAAAAA" />
+                    </div>
+                    <div style={{ color: "#8A8A8A", fontSize: 16, lineHeight: 1.6, marginBottom: 12 }}>
+                      No folder open
+                    </div>
+                    <button
+                      onClick={openFolder}
+                      style={{
+                        background: "#EEEEF2",
+                        border: "1px solid #EEEEF2",
+                        borderRadius: 4,
+                        color: "#007ACC",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        fontWeight: 400,
+                        padding: "6px 14px",
+                        fontFamily: "inherit",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#C9DEF5")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#EEEEF2")}
+                    >
+                      + OPEN FOLDER
+                    </button>
+                    {folderError && (
+                      <div style={{ color: "#C42B1C", fontSize: 12, marginTop: 10, lineHeight: 1.5 }}>
+                        {folderError}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 6,
+                        padding: "0 2px 8px",
+                      }}
+                    >
+                      <div
+                        title={folderName}
+                        style={{
+                          color: "#007ACC",
+                          fontSize: 13,
+                          fontWeight: 400,
+                          letterSpacing: 0.5,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {folderName}
+                      </div>
+                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                        <button
+                          onClick={openFolder}
+                          title="Open a different folder"
+                          style={{
+                            background: "#EEEEF2",
+                            border: "1px solid #EEEEF2",
+                            borderRadius: 4,
+                            color: "#007ACC",
+                            cursor: "pointer",
+                            fontSize: 11,
+                            fontFamily: "inherit",
+                            padding: "2px 6px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#C9DEF5")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "#EEEEF2")}
+                        >
+                          CHANGE
+                        </button>
+                        <button
+                          onClick={closeFolder}
+                          title="Close folder"
+                          style={{
+                            background: "#FDECEA",
+                            border: "1px solid #F1B0B7",
+                            borderRadius: 4,
+                            color: "#C42B1C",
+                            cursor: "pointer",
+                            fontSize: 11,
+                            fontFamily: "inherit",
+                            padding: "2px 6px",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#FAD4D4")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "#FDECEA")}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+
+                    {folderError && (
+                      <div style={{ color: "#C42B1C", fontSize: 12, marginBottom: 8, lineHeight: 1.5 }}>
+                        {folderError}
+                      </div>
+                    )}
+
+                    <FileTreeRootChildren node={folderTree} openFileId={openFileId} onOpenFile={openFileFromTree} />
+                  </>
+                )}
               </div>
             )}
           </div>

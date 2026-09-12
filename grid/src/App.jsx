@@ -140,6 +140,9 @@ export default function App() {
           svgTree={state.svgTree} customDirectoryTree={state.customDirectoryTree}
           dirFileInputRef={state.dirFileInputRef} handleDirSvgUpload={state.handleDirSvgUpload}
           addFromDirectory={state.addFromDirectory} removeFromDirectory={state.removeFromDirectory}
+          fileSystemApiSupported={state.fileSystemApiSupported} folderTree={state.folderTree}
+          folderName={state.folderName} openFolder={state.openFolder} closeFolder={state.closeFolder}
+          openFileFromTree={state.openFileFromTree} openFileId={state.openFileId} folderError={state.folderError}
           selected={state.selected} setSelected={state.setSelected} moveMode={state.movingSelection}
           reorderSymbols={state.reorderSymbols}
           groups={state.groups} pasteGroupAtSelection={state.pasteGroupAtSelection}
@@ -190,6 +193,7 @@ export default function App() {
         bgImage={state.bgImage} bgImageEditing={state.bgImageEditing}
         bgFileInputRef={state.bgFileInputRef} handleBgImageUpload={state.handleBgImageUpload}
         bgImageFix={state.bgImageFix} bgImageEdit={state.bgImageEdit} bgImageRemove={state.bgImageRemove}
+        applyBgImageToColors={state.applyBgImageToColors}
         addColumn={state.addColumn} addRow={state.addRow}
         insertColumnsBefore={state.insertColumnsBefore} insertColumnsAfter={state.insertColumnsAfter}
         insertRowBefore={state.insertRowBefore} insertRowAfter={state.insertRowAfter}

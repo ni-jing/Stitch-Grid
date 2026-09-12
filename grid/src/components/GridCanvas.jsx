@@ -926,6 +926,7 @@ export default function GridCanvas({
               boxSizing: "border-box",
               willChange: "transform",
             }}
+            onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => bgImageStartDrag(e, "move")}
           >
             {/* Corner: bottom-right (proportional resize) */}
@@ -935,6 +936,7 @@ export default function GridCanvas({
                 background: "#CA5010", border: "2px solid #F5F5F5", borderRadius: 3,
                 cursor: "nwse-resize", pointerEvents: "auto",
               }}
+              onPointerDown={(e) => e.stopPropagation()}
               onMouseDown={(e) => { e.stopPropagation(); bgImageStartDrag(e, "resize"); }}
             />
             {/* Corner: top-left (proportional resize) */}
@@ -944,6 +946,7 @@ export default function GridCanvas({
                 background: "#CA5010", border: "2px solid #F5F5F5", borderRadius: 3,
                 cursor: "nwse-resize", pointerEvents: "auto",
               }}
+              onPointerDown={(e) => e.stopPropagation()}
               onMouseDown={(e) => { e.stopPropagation(); bgImageStartDrag(e, "resize-tl"); }}
             />
             {/* Edge: mid-right (stretch horizontal) */}
@@ -953,6 +956,7 @@ export default function GridCanvas({
                 width: 10, height: 22, background: "#CA5010", border: "2px solid #F5F5F5",
                 borderRadius: 3, cursor: "ew-resize", pointerEvents: "auto",
               }}
+              onPointerDown={(e) => e.stopPropagation()}
               onMouseDown={(e) => { e.stopPropagation(); bgImageStartDrag(e, "stretch-right"); }}
             />
             {/* Edge: mid-left (stretch horizontal) */}
@@ -962,6 +966,7 @@ export default function GridCanvas({
                 width: 10, height: 22, background: "#CA5010", border: "2px solid #F5F5F5",
                 borderRadius: 3, cursor: "ew-resize", pointerEvents: "auto",
               }}
+              onPointerDown={(e) => e.stopPropagation()}
               onMouseDown={(e) => { e.stopPropagation(); bgImageStartDrag(e, "stretch-left"); }}
             />
             {/* Edge: mid-bottom (stretch vertical) */}
@@ -971,6 +976,7 @@ export default function GridCanvas({
                 width: 22, height: 10, background: "#CA5010", border: "2px solid #F5F5F5",
                 borderRadius: 3, cursor: "ns-resize", pointerEvents: "auto",
               }}
+              onPointerDown={(e) => e.stopPropagation()}
               onMouseDown={(e) => { e.stopPropagation(); bgImageStartDrag(e, "stretch-bottom"); }}
             />
             {/* Edge: mid-top (stretch vertical) */}
@@ -980,6 +986,7 @@ export default function GridCanvas({
                 width: 22, height: 10, background: "#CA5010", border: "2px solid #F5F5F5",
                 borderRadius: 3, cursor: "ns-resize", pointerEvents: "auto",
               }}
+              onPointerDown={(e) => e.stopPropagation()}
               onMouseDown={(e) => { e.stopPropagation(); bgImageStartDrag(e, "stretch-top"); }}
             />
           </div>

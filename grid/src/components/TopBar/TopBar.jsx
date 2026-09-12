@@ -99,7 +99,20 @@ const ICON_PATHS = {
   ],
 };
 
-// Detect macOS so menu shortcut hints show the platform's own modifier
+// App icon shown at the very left of the top bar (VS Code-style corner
+// mark, ahead of the File/Edit/... menus). Native viewBox is 0-100 with
+// stroked lines rather than filled paths, unlike the menu icons above, so
+// it gets its own tiny renderer instead of going through MenuIcon.
+function AppGridIcon({ size = 18 }) {
+  return (
+    <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "block", flexShrink: 0 }}>
+      <path d="M 10 33 L 90 33" stroke="#4b4b4b" strokeWidth="5" strokeLinecap="round" />
+      <path d="M 10 66 L 90 66" stroke="#4b4b4b" strokeWidth="5" strokeLinecap="round" />
+      <path d="M 33 10 L 33 90" stroke="#4b4b4b" strokeWidth="5" strokeLinecap="round" />
+      <path d="M 66 10 L 66 90" stroke="#4b4b4b" strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  );
+}
 // symbol/name instead of a hardcoded one. userAgentData.platform is checked
 // first since navigator.platform is deprecated; both are only present in
 // the browser, so this stays a no-op (defaults to non-Mac) during any SSR.
@@ -1628,7 +1641,7 @@ function ContextEditMenu({ items, x, y, onClose, lastUsedSymbol, onUseLastSymbol
 // TOP BAR
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export default function TopBar({ selected, setSelected, historyLen, undo, redo, clipboard, copySelected, paste, colorClipboard, copySelectedColor, pasteColor, symbolClipboard, copySelectedSymbol, pasteSymbol, cutSelectedSymbols, mirrorUp, mirrorDown, mirrorLeft, mirrorRight, flipHorizontal, flipVertical, clearSelected, clearSelectedColors, colorSelectedCells, clearAllCells, clearAllColors, setShowConfirm, cells, symbols, bgImage, bgImageEditing, bgFileInputRef, handleBgImageUpload, bgImageFix, bgImageEdit, bgImageRemove, addColumn, addRow, insertColumnsBefore, insertColumnsAfter, insertRowBefore, insertRowAfter, removeSelectedColumns, removeSelectedRows, importGridmark, saveGridmark, saveError, resizeGrid, resizeCell, cellAspect, gridRows, gridCols, knittingMode, toggleKnittingMode, fileName, setFileName, cellColor, setCellColor, fillMode, setFillMode, fitGridToPage, memoOpen, onMemoToggle, contextMenuPos, onContextMenuClose, openFind, openReplace, lastUsedSymbolId, placeSymbol, rowShading = "none", setRowShading, zoom, setZoom, saveGroup }) {
+export default function TopBar({ selected, setSelected, historyLen, undo, redo, clipboard, copySelected, paste, colorClipboard, copySelectedColor, pasteColor, symbolClipboard, copySelectedSymbol, pasteSymbol, cutSelectedSymbols, mirrorUp, mirrorDown, mirrorLeft, mirrorRight, flipHorizontal, flipVertical, clearSelected, clearSelectedColors, colorSelectedCells, clearAllCells, clearAllColors, setShowConfirm, cells, symbols, bgImage, bgImageEditing, bgFileInputRef, handleBgImageUpload, bgImageFix, bgImageEdit, bgImageRemove, applyBgImageToColors, addColumn, addRow, insertColumnsBefore, insertColumnsAfter, insertRowBefore, insertRowAfter, removeSelectedColumns, removeSelectedRows, importGridmark, saveGridmark, saveError, resizeGrid, resizeCell, cellAspect, gridRows, gridCols, knittingMode, toggleKnittingMode, fileName, setFileName, cellColor, setCellColor, fillMode, setFillMode, fitGridToPage, memoOpen, onMemoToggle, contextMenuPos, onContextMenuClose, openFind, openReplace, lastUsedSymbolId, placeSymbol, rowShading = "none", setRowShading, zoom, setZoom, saveGroup }) {
   const importFileRef = useRef(null);
   const hasContent = cells.size > 0;
   let hasSymbolsUsed = false;
@@ -1782,6 +1795,7 @@ export default function TopBar({ selected, setSelected, historyLen, undo, redo, 
     { icon: { d: ICON_PATHS.backgroundImage }, label: "Background Image", color: "#4B4B4B", onClick: () => bgFileInputRef.current?.click(), disabled: menusDisabled || knittingMode },
     { icon: { d: ICON_PATHS.edit }, label: "Edit Background Image", color: "#4B4B4B", onClick: bgImageEdit, disabled: menusDisabled || !bgImage },
     { icon: { d: ICON_PATHS.cut }, label: "Remove Background Image", color: "#4B4B4B", onClick: bgImageRemove, disabled: menusDisabled || !bgImage },
+    { icon: { d: COLOR_FILL_SVG.paths[0].d, viewBox: COLOR_FILL_SVG.viewBox }, label: "Trace Background to Colors", color: "#4B4B4B", onClick: applyBgImageToColors, disabled: menusDisabled || !bgImage },
     { divider: true },
     { icon: { d: ICON_PATHS.memo }, label: "Memo", color: "#4B4B4B", onClick: onMemoToggle, disabled: menusDisabled },
     { divider: true },
@@ -1847,6 +1861,9 @@ export default function TopBar({ selected, setSelected, historyLen, undo, redo, 
         borderBottom: bgImageEditing ? "1px solid #CA5010" : "1px solid #EEEEF2",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", padding: "0 8px 0 2px" }}>
+            <AppGridIcon size={18} />
+          </div>
           <DropdownMenu label="File" items={fileItems} disabled={menusDisabled} />
           <DropdownMenu label="Edit" items={editItems} disabled={menusDisabled} minWidth={240} />
           <DropdownMenu label="Insert" items={insertItems} disabled={menusDisabled} />

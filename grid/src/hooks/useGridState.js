@@ -158,6 +158,20 @@ export default function useGridState() {
   const fileHandleRef = useRef(null);
   const [saveError, setSaveError] = useState(null);
   const [fileName, setFileName] = useState("Untitled");
+
+  // ── Local folder browser (File System Access API) ─────────────────────
+  // Lets the user pick a local folder and browse its .json (Gridmark) files
+  // in the Sidebar's Files section. showDirectoryPicker is Chromium-only,
+  // so the UI feature-detects via fileSystemApiSupported and shows a
+  // fallback message elsewhere when it's unavailable.
+  const [fileSystemApiSupported] = useState(
+    () => typeof window !== "undefined" && typeof window.showDirectoryPicker === "function"
+  );
+  const [folderTree, setFolderTree] = useState(null); // null = no folder open
+  const [folderName, setFolderName] = useState("");
+  const [openFileId, setOpenFileId] = useState(null);
+  const [folderError, setFolderError] = useState("");
+  const rootDirHandleRef = useRef(null);
   const [cellColor, setCellColor] = useState("#ffffff");
   const cellColorRef = useRef(cellColor);
   cellColorRef.current = cellColor;
@@ -979,6 +993,10 @@ export default function useGridState() {
         fileHandleRef.current = handle;
         setFileName(handle.name.replace(/\.json$/i, ""));
       }
+      // Opening a file pushes history (so the import itself is undoable),
+      // which marks dirtyRef true as a side effect — but merely opening a
+      // file with no further edits shouldn't count as "unsaved changes".
+      dirtyRef.current = false;
       // Return memoText so App.jsx can restore it into its own state
       return typeof data.memoText === "string" ? data.memoText : "";
     } catch (e) {
@@ -1100,6 +1118,72 @@ export default function useGridState() {
       dirtyRef.current = false;
     }
   }, [buildGridmarkJson]);
+
+  // ── Local folder browser ────────────────────────────────────────────────
+
+  // Walks a FileSystemDirectoryHandle into the same { __files: [...], sub: {...} }
+  // shape as svgTree/customDirectoryTree, so DirectoryPanel-style TreeNode
+  // logic can be reused/mirrored. Only .json files are listed (Gridmark's
+  // own export format) — file contents aren't read here, just the handle,
+  // so opening a large folder stays cheap.
+  const buildFolderTree = useCallback(async (dirHandle) => {
+    const tree = { __files: [] };
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === "directory") {
+        tree[entry.name] = await buildFolderTree(entry);
+      } else if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".json")) {
+        const id = `dirFile_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        tree.__files.push({ id, name: entry.name, handle: entry });
+      }
+    }
+    return tree;
+  }, []);
+
+  const openFolder = useCallback(async () => {
+    if (!fileSystemApiSupported) return;
+    try {
+      const dirHandle = await window.showDirectoryPicker();
+      const tree = await buildFolderTree(dirHandle);
+      rootDirHandleRef.current = dirHandle;
+      setFolderTree(tree);
+      setFolderName(dirHandle.name);
+      setOpenFileId(null);
+      setFolderError("");
+    } catch (err) {
+      if (err.name === "AbortError") return; // user cancelled the picker
+      setFolderError("Couldn't open that folder: " + err.message);
+    }
+  }, [fileSystemApiSupported, buildFolderTree]);
+
+  const closeFolder = useCallback(() => {
+    rootDirHandleRef.current = null;
+    setFolderTree(null);
+    setFolderName("");
+    setOpenFileId(null);
+    setFolderError("");
+  }, []);
+
+  // Opens a file picked from the folder tree onto the grid. Reuses
+  // importGridmark exactly like TopBar's File → Open — passing the file's
+  // own handle means saveGridmark() will write straight back to it
+  // afterwards, same as a file opened via the native picker.
+  const openFileFromTree = useCallback(async (fileEntry) => {
+    if (dirtyRef.current) {
+      const proceed = window.confirm(
+        "You have unsaved changes. Opening this file will discard them. Continue?"
+      );
+      if (!proceed) return;
+    }
+    try {
+      const file = await fileEntry.handle.getFile();
+      const text = await file.text();
+      importGridmark(text, fileEntry.handle);
+      setOpenFileId(fileEntry.id);
+      setFolderError("");
+    } catch (err) {
+      setFolderError("Couldn't open that file: " + err.message);
+    }
+  }, [importGridmark]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // COPY / PASTE
@@ -2315,6 +2399,101 @@ export default function useGridState() {
     setBgImage((prev) => (prev ? { ...prev, opacity } : prev));
   }, []);
 
+  // Bakes the background image into actual cell colors: for every grid
+  // cell the image overlaps, samples the portion of the *original* image
+  // (not the faded on-canvas preview) that falls under that cell and sets
+  // the cell's color to the average of those pixels. Unlike position/
+  // opacity, this is a real content edit, so it goes through pushHistory
+  // like any other cell mutation and is undoable.
+  const applyBgImageToColors = useCallback(async () => {
+    const bg = bgImageRef.current;
+    if (!bg || !bg.src || !bg.naturalW || !bg.naturalH) return;
+
+    const img = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Couldn't load the background image."));
+      image.src = bg.src;
+    }).catch((err) => {
+      alert(err.message);
+      return null;
+    });
+    if (!img) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = bg.naturalW;
+    canvas.height = bg.naturalH;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, bg.naturalW, bg.naturalH);
+    let data;
+    try {
+      data = ctx.getImageData(0, 0, bg.naturalW, bg.naturalH).data;
+    } catch (e) {
+      alert("Couldn't read the background image's pixels: " + e.message);
+      return;
+    }
+
+    // Grid cells the image's cell-space box [col, col+cellW) x [row, row+cellH)
+    // actually overlaps, clipped to the current grid bounds.
+    const rMin = Math.max(0, Math.floor(bg.row));
+    const rMax = Math.min(gridRows - 1, Math.ceil(bg.row + bg.cellH) - 1);
+    const cMin = Math.max(0, Math.floor(bg.col));
+    const cMax = Math.min(gridCols - 1, Math.ceil(bg.col + bg.cellW) - 1);
+    if (rMin > rMax || cMin > cMax) return; // image doesn't overlap the grid
+
+    const pxPerCellX = bg.naturalW / bg.cellW;
+    const pxPerCellY = bg.naturalH / bg.cellH;
+
+    pushHistory(cells);
+    const next = cloneCells(cells);
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        // Overlap of this cell [c, c+1) x [r, r+1) with the image's box, in
+        // the same cell-space units bg.col/row/cellW/cellH are stored in.
+        const x0 = Math.max(c, bg.col);
+        const x1 = Math.min(c + 1, bg.col + bg.cellW);
+        const y0 = Math.max(r, bg.row);
+        const y1 = Math.min(r + 1, bg.row + bg.cellH);
+        if (x1 <= x0 || y1 <= y0) continue;
+
+        // That overlap, mapped into the source image's pixel space.
+        const px0 = Math.max(0, Math.floor((x0 - bg.col) * pxPerCellX));
+        const px1 = Math.min(bg.naturalW, Math.ceil((x1 - bg.col) * pxPerCellX));
+        const py0 = Math.max(0, Math.floor((y0 - bg.row) * pxPerCellY));
+        const py1 = Math.min(bg.naturalH, Math.ceil((y1 - bg.row) * pxPerCellY));
+        if (px1 <= px0 || py1 <= py0) continue;
+
+        // Stride large regions so this stays fast on big images/grids —
+        // ~24 samples per axis is plenty for an average color.
+        const strideX = Math.max(1, Math.floor((px1 - px0) / 24));
+        const strideY = Math.max(1, Math.floor((py1 - py0) / 24));
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        for (let py = py0; py < py1; py += strideY) {
+          const rowOffset = py * bg.naturalW * 4;
+          for (let px = px0; px < px1; px += strideX) {
+            const i = rowOffset + px * 4;
+            rSum += data[i]; gSum += data[i + 1]; bSum += data[i + 2];
+            count++;
+          }
+        }
+        if (count === 0) continue;
+        const hex =
+          "#" + [rSum, gSum, bSum]
+            .map((sum) => Math.round(sum / count).toString(16).padStart(2, "0"))
+            .join("");
+
+        // Color lives on a symbol's root cell, not its continuation cells.
+        const key = cellKey(r, c);
+        const rootKey = resolveRoot(next, key) || key;
+        const existing = next.get(rootKey);
+        next.set(rootKey, { ...(existing || {}), color: hex });
+      }
+    }
+
+    setCells(next);
+  }, [cells, gridRows, gridCols]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // KEYBOARD SHORTCUTS
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2854,6 +3033,8 @@ export default function useGridState() {
     startEditSymbol, saveEditSymbol, cancelEditSymbol,
     showDirectory, setShowDirectory, svgTree, customDirectoryTree,
     dirFileInputRef, handleDirSvgUpload, addFromDirectory, removeFromDirectory,
+    fileSystemApiSupported, folderTree, folderName, openFolder, closeFolder,
+    openFileFromTree, openFileId, folderError,
     offset, zoom, setZoom, csW, csH, containerRef, spaceDown, getViewport, fitGridToPage,
     selected, setSelected, dragRect,
     cells,
@@ -2872,6 +3053,7 @@ export default function useGridState() {
     showConfirm, setShowConfirm,
     bgImage, bgImageEditing, bgFileInputRef, handleBgImageUpload,
     bgImageStartDrag, bgImageFix, bgImageEdit, bgImageRemove, setBgImageOpacity,
+    applyBgImageToColors,
     onMouseDown, onMouseMove, onMouseUp, onWheel,
     dirtyRef,
     fileName, setFileName,
