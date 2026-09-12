@@ -574,7 +574,7 @@ Outlined color box is active\r
 **Import:** Import JSON file that was saved before\r
 **Save:** Save as JSON to be re-imported back to grid\r
 **Save as:** Save grid as image/vector\r
-**Save Legened:** Save legend as image/vector\r
+**Save Legend:** Save legend as image/vector\r
 \r
 ## EDIT\r
 **Right Click** to open edit menu\r
@@ -583,6 +583,7 @@ Outlined color box is active\r
 **Cut (All):** clear selected cells\r
 **Copy (All):** copy selected cells\r
 **Paste (All):** paste clipboard to selected cell\r
+**Group:** save selected cells as a group (on side bar) for reuse\r
 **Mirror:** mirror selected cells in direction\r
 **Flip Horizontal:** flip selected cells horizontally\r
 **Flip Vertically:** flip selected cells vertically\r
@@ -616,6 +617,7 @@ Click: Slash up till clicked cell\r
 **Background Image:** insert background image\r
 **Edit Background Image:** move/stretch/change opacity of background image\r
 **Remove Background Image:**\r
+**Trace Background to Colors:** transform background image to colored cells\r
 **Memo:** Open memo pad to take notes, content is saved when memo is closed\r
 **Fit to page:** fit grid to page\r
 \r
@@ -624,10 +626,17 @@ Number of cells selected\r
 Rows: {num of rows selected} Cols: {num of cols selected}\r
 [start row, start col] -> [end row, end col]\r
 \r
-## SIDE BAR\r
+## SIDE BAR (Symbol)\r
 **DIR:** directory of symbols\r
 **EDIT:** upload your own symbols, must have svg extension. Width is the number of grid cells the symbol occupies.\r
 **◀:** collapse/expand side bar\r
+\r
+## SIDE BAR (Groups)\r
+Saved groups of symbols/colors\r
+\r
+## SIDE BAR (Files)\r
+Open folder from file explorer\r
+Only shows json files\r
 \r
 ## KEYBOARD SHORTCUTS\r
 **ctrl + x:** cut\r
